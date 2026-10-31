@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'Java21'
+        maven 'Maven3'
+    }
+    stages {
+        stage('Checkout') {
+            steps { git branch: 'main', url: 'YOUR_GITHUB_REPOSITORY_URL' }
+        }
+        stage('Build') {
+            steps { sh 'mvn clean package' }
+        }
+        stage('Archive') {
+            steps { archiveArtifacts artifacts: 'target/amiya.war', fingerprint: true }
+        }
+        stage('Deploy to Tomcat') {
+            steps {
+                sshagent(credentials: ['tomcat-ssh']) {
+                    sh '''
+                      scp -o StrictHostKeyChecking=no target/amiya.war ubuntu@YOUR_TOMCAT_PUBLIC_IP:/home/ubuntu/amiya.war
+                      ssh -o StrictHostKeyChecking=no ubuntu@YOUR_TOMCAT_PUBLIC_IP "sudo mv /home/ubuntu/amiya.war /home/ubuntu/tomcat/webapps/amiya.war"
+                    '''
+                }
+            }
+        }
+    }
+}
